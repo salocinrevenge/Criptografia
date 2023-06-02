@@ -11,7 +11,7 @@ def change(numero, bits):
         numero = numero >> 1
     return temp
 
-def escreverPalavra(palavra, vetor, pos):
+def escreverPalavra(palavra, vetor, pos, reversed):
     for letra in palavra:
         nletra = ord(letra)
         for _ in range(16):
@@ -20,20 +20,24 @@ def escreverPalavra(palavra, vetor, pos):
             else:
                 vetor[pos] &= ~1
             pos += 1
+            if reversed:
+                pos -=2
             nletra = nletra >> 1
     return vetor, pos
 
-def escreverNumero(numero, vetor, pos):
+def escreverNumero(numero, vetor, pos, reversed):
     for _ in range(32):
         if (numero & 1) == 1:
             vetor[pos] |= 1
         else:
             vetor[pos] &= ~1
         pos += 1
+        if reversed:
+            pos -=2
         numero = numero >> 1
     return vetor, pos
 
-def lerPalavra(vetor, tamanho, pos):
+def lerPalavra(vetor, tamanho, pos, reversed):
     palavra = ""
     for _ in range(tamanho):
         letra = 0
@@ -42,19 +46,23 @@ def lerPalavra(vetor, tamanho, pos):
             if (vetor[pos] & 1) == 1:
                 letra |= 1
             pos += 1
+            if reversed:
+                pos -=2
         palavra += chr(change(letra,16))
     return palavra, pos
 
-def lerNumero(vetor, pos):
+def lerNumero(vetor, pos, reversed):
     numero = 0
     for _ in range(32):
         numero = numero << 1
         if (vetor[pos] & 1) == 1:
             numero |= 1
         pos += 1
+        if reversed:
+            pos -=2
     return change(numero,32), pos
 
-def esconderImagem(image_path):
+def esconderImagem(image_path, reversed = False):
     # Abrir a imagem
     img = Image.open(image_path)
 
@@ -83,12 +91,14 @@ def esconderImagem(image_path):
     assinatura = "NHS#Est"
 
     pos = 0
+    if reversed:
+        pos = len(vector)-1
 
-    vector, pos = escreverPalavra(assinatura, vector, pos)
+    vector, pos = escreverPalavra(assinatura, vector, pos, reversed)
 
-    vector, pos = escreverNumero(tamanho, vector, pos)
+    vector, pos = escreverNumero(tamanho, vector, pos, reversed)
 
-    vector, pos = escreverPalavra(mensagem, vector, pos)
+    vector, pos = escreverPalavra(mensagem, vector, pos, reversed)
 
     # Criar uma nova imagem com o tamanho especificado
     img = Image.new('RGB', image_size)
@@ -100,21 +110,23 @@ def esconderImagem(image_path):
     img.save(input("Indique o nome do arquivo de saída com sua extensão\n"))
 
 
-def lerImagem(image_path):
+def lerImagem(image_path, reversed = False):
     img = Image.open(image_path)
     img = img.convert('RGB')
     pixels = list(img.getdata())
     vector = [value for pixel in pixels for value in pixel]
     
     pos = 0
-    assinatura, pos = lerPalavra(vector, len("NHS#Est"), pos)
+    if reversed:
+        pos = len(vector)-1
+    assinatura, pos = lerPalavra(vector, len("NHS#Est"), pos, reversed)
     if assinatura != "NHS#Est":
         print("Arquivo nao contem mensagem!")
         return
     
-    tamanho, pos = lerNumero(vector, pos)
+    tamanho, pos = lerNumero(vector, pos, reversed)
     
-    mensagem, pos = lerPalavra(vector, tamanho, pos)
+    mensagem, pos = lerPalavra(vector, tamanho, pos, reversed)
     
     return mensagem
 
@@ -160,8 +172,8 @@ def esconderSom(entrada):
         audio_file.writeframes(audio_data)
 
 
-def lerSom():
-    with wave.open('audio_manipulado.wav', 'rb') as audio_file:
+def lerSom(path):
+    with wave.open(path, 'rb') as audio_file:
         # Obtém os parâmetros do arquivo de áudio
         n_channels = audio_file.getnchannels()
         sample_width = audio_file.getsampwidth()
